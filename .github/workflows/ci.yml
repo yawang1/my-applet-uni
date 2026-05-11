@@ -1,82 +1,71 @@
-name: Build UniApp and Generate Preview QR Code
+name: Build and Upload UniApp to WeChat MiniProgram
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches:
+      - main  # 或者你的默认分支，比如 master
 
 jobs:
-  build-and-preview:
+  build-and-upload:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 拉取代码
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      # 2. 设置 Node.js 环境 (锁定最稳定的 18 版本)
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: '18.20.8'
-          cache: 'npm'
+          node-version: 18 # 根据你的项目调整 Node 版本
 
-      # 3. 【核心】彻底清理并强制安装依赖
-      - name: Clean and Install dependencies
-        run: |
-          # 强制删除旧的依赖和缓存
-          rm -rf node_modules package-lock.json
-          npm cache clean --force
-          
-          # 使用国内淘宝镜像加速下载
-          npm config set registry https://registry.npmmirror.com
-          
-          # 强制安装，忽略所有 peer deps 冲突
-          npm install --legacy-peer-deps --force
+      - name: Install dependencies
+        run: npm install
 
-      # 4. 编译 uni-app 为微信小程序
-      - name: Build uni-app for MP-Weixin
+      - name: Build WeChat MiniProgram
         run: npm run build:mp-weixin
 
-      # 5. 注入环境变量 (微信密钥)
-      - name: Setup Environment Variables
-        env:
-          WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
-          WECHAT_PRIVATE_KEY_BASE64: ${{ secrets.WECHAT_PRIVATE_KEY_BASE64 }}
+      # === 关键步骤：上传到微信小程序后台 ===
+      - name: Upload to WeChat MiniProgram
         run: |
-          echo "WECHAT_APP_ID=$WECHAT_APP_ID" >> $GITHUB_ENV
-          echo "WECHAT_PRIVATE_KEY_BASE64=$WECHAT_PRIVATE_KEY_BASE64" >> $GITHUB_ENV
-	- name: 上传到微信小程序后台
-	        run: |
-	          npm install miniprogram-ci --save-dev
-	          node -e "
-	          const ci = require('miniprogram-ci');
-	          const project = new ci.Project({
-	            appid: '你的小程序AppID', // 替换成你的
-	            type: 'miniProgram',
-	            projectPath: 'unpackage/dist/build/mp-weixin', // uni-app打包后的路径
-	            privateKeyPath: '你的密钥文件名.key', // 刚才下载的那个key
-	            ignores: ['node_modules/**/*']
-	          });
-	          ci.upload({
-	            project,
-	            version: '1.0.0', // 固定版本号
-	            desc: 'agent在 $(date +"%Y-%m-%d %H:%M:%S") 提交上传' // 这里用Linux命令获取当前时间作为备注
-	          }).then(() => {
-	            console.log('✅ 上传成功！')
-	          }).catch((err) => {
-	            console.error(err);
-	            process.exit(1);
-	          });
-	          "
+          # 1. 设置环境变量（注意：这里不要用 $ 包裹，直接赋值）
+          echo "WECHAT_APP_ID=${{ secrets.WECHAT_APP_ID }}" >> $GITHUB_ENV
+          
+          # 如果你的密钥文件名包含特殊字符，建议直接在这里写死文件名，比如 private.key
+          echo "WECHAT_PRIVATE_KEY_BASE64=${{ secrets.WECHAT_PRIVATE_KEY_BASE64 }}" >> $GITHUB_ENV
 
-      # 6. 执行预览脚本，生成二维码
-      - name: Generate Preview QR Code
-        run: node scripts/preview.js
+          # 2. 安装微信官方上传工具
+          npm install miniprogram-ci --save-dev
 
-      # 7. 上传生成的二维码
-      - name: Upload QR Code Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: preview-qrcode
-          path: preview
+          # 3. 执行上传脚本 (Node.js)
+          node -e "
+          const ci = require('miniprogram-ci');
+          const fs = require('fs');
+          
+          // 读取 Base64 密钥并写入临时文件
+          const privateKey = process.env.WECHAT_PRIVATE_KEY_BASE64;
+          // 这里的 'private.key' 必须换成你下载的密钥文件的实际名字
+          fs.writeFileSync('private.key', privateKey, 'base64');
+
+          const project = new ci.Project({
+            appid: wx528cb3a33a5fd6cf, 
+            type: 'miniProgram',
+            projectPath: 'unpackage/dist/build/mp-weixin', // uni-app 默认打包路径
+            privateKeyPath: 'private.key', 
+            ignores: ['node_modules/**/*']
+          });
+
+          // 生成带当前时间的备注
+          const currentTime = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+          const desc = 'agent在 ' + currentTime + ' 提交上传';
+
+          ci.upload({
+            project,
+            version: '1.0.0', 
+            desc: desc 
+          }).then(() => {
+            console.log('✅ 微信小程序上传成功！');
+          }).catch((err) => {
+            console.error('❌ 上传失败:', err);
+            process.exit(1);
+          });
+          "
