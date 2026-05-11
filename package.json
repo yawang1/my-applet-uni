@@ -2,18 +2,27 @@
   "name": "eat-roulette-mini-program",
   "private": true,
   "devDependencies": {
+    "@dcloudio/uni-cli-i18n": "^2.0.2-5000720260410001",
+    "@dcloudio/uni-cli-shared": "^2.0.2-5000720260410001",
+    "@dcloudio/uni-template-compiler": "^2.0.2-5000720260410001",
     "@dcloudio/vue-cli-plugin-uni": "^2.0.2-5000720260410001",
-    "cross-env": "^10.1.0",
+    "@dcloudio/webpack-uni-mp-loader": "^2.0.2-5000720260410001",
+    "@dcloudio/webpack-uni-pages-loader": "^2.0.2-5000720260410001",
+    "@vue/cli-plugin-babel": "^4.5.19",
+    "@vue/cli-service": "^4.5.19",
+    "copy-webpack-plugin": "^5.1.2",
+    "cross-env": "^7.0.3",
     "miniprogram-ci": "^2.1.31",
-    "sass": "^1.82.0",
-    "sass-loader": "^10.5.2"
+    "sass": "^1.54.9",
+    "sass-loader": "^10.1.1",
+    "vue-template-compiler": "^2.6.14"
   },
   "version": "1.0.0",
   "description": "",
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build:mp-weixin": "cross-env NODE_ENV=production UNI_PLATFORM=mp-weixin vue-cli-service uni-build"
+    "build:mp-weixin": "cross-env NODE_OPTIONS=--require=./scripts/register-uni-alias.js NODE_ENV=production UNI_PLATFORM=mp-weixin UNI_INPUT_DIR=src UNI_CLI_CONTEXT=. vue-cli-service uni-build"
   },
   "repository": {
     "type": "git",
@@ -26,5 +35,16 @@
   "bugs": {
     "url": "https://github.com/yawang1/my-applet-uni/issues"
   },
-  "homepage": "https://github.com/yawang1/my-applet-uni#readme"
+  "homepage": "https://github.com/yawang1/my-applet-uni#readme",
+  "dependencies": {
+    "@dcloudio/uni-app": "^2.0.2-5000720260410001",
+    "@dcloudio/uni-i18n": "^2.0.2-5000720260410001",
+    "@dcloudio/uni-mp-vue": "^2.0.2-5000720260410001",
+    "@dcloudio/uni-mp-weixin": "^2.0.2-5000720260410001",
+    "@dcloudio/uni-stacktracey": "^2.0.2-5000720260410001",
+    "@vue/shared": "^3.5.13",
+    "flyio": "^0.6.14",
+    "vue": "^2.6.14",
+    "vuex": "^3.6.2"
+  }
 }

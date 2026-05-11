@@ -147,7 +147,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
 .page {
   min-height: 100vh;
   padding: 36rpx 28rpx 60rpx;

@@ -1,0 +1,22 @@
+{
+  "pages": [
+    "pages/home/index"
+  ],
+  "subPackages": [],
+  "window": {
+    "backgroundColor": "#fff7ef",
+    "navigationBarBackgroundColor": "#ff9f6e",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "今天吃什么"
+  },
+  "requiredPrivateInfos": [
+    "getLocation",
+    "chooseLocation"
+  ],
+  "permission": {
+    "scope.userLocation": {
+      "desc": "小程序中有功能需要调用位置接口"
+    }
+  },
+  "usingComponents": {}
+}

@@ -4,7 +4,7 @@ export default {
 }
 </script>
 
-<style lang="scss">
+<style>
 page {
   min-height: 100%;
   background: linear-gradient(180deg, #fff7ef 0%, #ffe7d1 100%);
