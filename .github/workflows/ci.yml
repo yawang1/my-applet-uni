@@ -26,46 +26,43 @@ jobs:
 
       # === 关键步骤：上传到微信小程序后台 ===
       - name: Upload to WeChat MiniProgram
-        run: |
-          # 1. 设置环境变量（注意：这里不要用 $ 包裹，直接赋值）
-          echo "WECHAT_APP_ID=${{ secrets.WECHAT_APP_ID }}" >> $GITHUB_ENV
-          
-          # 如果你的密钥文件名包含特殊字符，建议直接在这里写死文件名，比如 private.key
-          echo "WECHAT_PRIVATE_KEY_BASE64=${{ secrets.WECHAT_PRIVATE_KEY_BASE64 }}" >> $GITHUB_ENV
-
-          # 2. 安装微信官方上传工具
-          npm install miniprogram-ci --save-dev
-
-          # 3. 执行上传脚本 (Node.js)
-          node -e "
-          const ci = require('miniprogram-ci');
-          const fs = require('fs');
-          
-          // 读取 Base64 密钥并写入临时文件
-          const privateKey = 'LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcEFJQkFBS0NBUUVBc1R2R2pjR3VXQWZPRWI3cTlmRHFISDZoOE9iWU5uQXVpQzYvaWpwL2VsellGQUU3CjYyMDlUT2gyN2k1eFhCcm0xbVcxamxWc2pJb3pqdTNZY0lFM0JCMm0ySDdnTTgwN3d3eVJkT0lXSzM2QjA5MEkKVC9hRnNCMFVxUEJJQVpRTUxkTm9EV0xmL0J3U2QxWlBpSFRnZzcrQ2cwT2docnBZQkVsOFVGTkM2VmdZTFkzNgpYcmNsZEIyNkhEVHNuOE1TRkpmRWhadHBSUWV1aGd3YXlkWGpUQTdFZzFZS2hXMVVta3NXTXJrdXZUNXJwVXc2CnNxQml2RVZvY0RQZi9Fd3JyK2U0eTlWZEczTWgzTUthNU5nTUkvbms4WUo1dHYzQkxFYkoxNU80S3R4YnRiNVAKcEU5NDdxVjc4Y0JDVDhmOEJEeEJ6bnlvaGtxVk9ZdWZ4UGJuS1FJREFRQUJBb0lCQUNvOUo4WHpDZHo3QnphZApmSnZlcmJ6YXhUZUhuTEhrcklKU09kMzBzUnIxYzUzWTZYSGpWLyt6UzF6YWZyUEh5WW9CTlhMVmt3Z3ZpN2dkCm9UNjIzT2pETkZkV2JaS0s4Qm85TFpGZ3JJM3pHWGZucnFwNEEwYUV0NzdIZlRHN0dlZjJBVTluYUNCS2hIQWkKaHRQcm52Sm5PdkNUdG5kRmcrS0pyUEhyMWYrTVZGNGFHVGhLTHh3dzREYU9MeXN5SFRqWXI4S0tsWkdjcTZNdAplZGthTG81ck12NFNVUkVIWDVkZjRYQWZZVFhKMFdYcWhpVXk4aWRrY1MzNm1MdmVHR0NDL1RkNzBFaVZlU0R3Cm1nWUVMS3BNblczb3owK3dhRWVRZ0lDT0FTOTlkSENPN0d5cUtPc0c5VnJTSGhsTUxSbFlVQU9KeWM1cmZHdmkKRU1XL0NRMENnWUVBNTE2YndHbjJCZ2NpNS9XWjVzaC8wY25pT2I1MXBnVEJPbE43U0owdUp3c2NjZUJ6MldkZwpUUVVKVTA1WUFsZ0JDT1JvN0ZwUFdLMHU0K1krMWFkczZ6WjdKY0s3VHNUNFBrbG1zbXZwYjVaREFhWUYzMUw0CmZNdEt6bTJobmVEeDIvK1Z3eVlEV1VJQ2ZMSi9yaXZ0eUV3SldmWmh0U2N4NGFGelR5MHc0cXNDZ1lFQXhCblQKYUVqNlBJTW45QUdPbGt4M0RkT216QnNiL2dZQStLcVhDRkdJYTByTkYvekRTenpqNVc0RzlMd2s5MmNqL24rWApHMGNCeFNIWVZ3aFVmRm5vSFhBMDd3cjhkWDNuRmdTbk5La21LZGkyT0dhc24zOE5ndzVJVDRMeThWN1YvdXFaCjlCcG53N3oycFppRnZ6MWVGcFhlN3FvN2FnaW1OOHJNYnZObC9Yc0NnWUVBdm9GdDZVN1dIangrQjFSNHRrZmMKeHhaZHlZSURTUUdkUUxOQVRaZnVTb09obGpwajZWeHZOTHV5NC84Y0JFSUdDQlphTmxKZUJ2d0NJZkNSU0VhbApMajhid3duR1JLTjJhNEx3cG5Tb0x4TWdkUmtJdU11T2d1SzQ0NlB0Y1J1b3lhWjIzOHBLODVHZ2pxQkM5VnlDClcyd1FQeHpaY3Rtay9zMTdMblJkVGlVQ2dZQmNJaUlnWWdFbnd4dFhXZy9xNzV3VDQvZis5MUdzaEplYVBWUGUKZGFnWmVMaHBaN2s5dFNzQmxUTXhjdUFQV09jaFlFTFhid0lXNDNMb1dTS1FsaEVuRzV2VEg1OURlRmJGRW9TWQppa3hDNXUyZURDZFlmSElWdS9VZlhrL1VOWkZuUmtQMDJ4OGJhTUdkUmM2NDdoVXhtVkozWVlXdXFNZW5lT0daCjAwTjgxd0tCZ1FEbFJPTUpTQ3FWb2dic3M4Yks2UnhKYXRZVzZPRFVMSWpWZkVrakVFT0xVSDVmcld1aDRiR0MKM2hqN2RBZGd2Uk5pdFBEaTNnVTd4R1hjY2NUc2JTekYzVXI5QnBPVm5FV3J6SUh5V0NUNWRaZ2loakFLZFBGSgpGaGN3aXVlRDB3MndFSWI4TXBUODZKUjNNL0JwT0xyeWRNNDBrRFZacjJpbWVUMEV3S1liT1E9PQotLS0tLUVORCBSU0EgUFJJVkFURSBLRVktLS0tLQo'=;
-          // 这里的 'private.key' 必须换成你下载的密钥文件的实际名字
-          fs.writeFileSync('private.key', privateKey, 'base64');
-
-          const project = new ci.Project({
-            appid: 'wx528cb3a33a5fd6cf', 
-            type: 'miniProgram',
-            projectPath: 'unpackage/dist/build/mp-weixin', // uni-app 默认打包路径
-            privateKeyPath: 'private.key', 
-            ignores: ['node_modules/**/*']
-          });
-
-          // 生成带当前时间的备注
-          const currentTime = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
-          const desc = 'agent在 ' + currentTime + ' 提交上传';
-
-          ci.upload({
-            project,
-            version: '1.0.0', 
-            desc: desc 
-          }).then(() => {
-            console.log('✅ 微信小程序上传成功！');
-          }).catch((err) => {
-            console.error('❌ 上传失败:', err);
-            process.exit(1);
-          });
-          "
+              run: |
+                # 1. 安装微信官方上传工具
+                npm install miniprogram-ci --save-dev
+      
+                # 2. 将脚本内容写入一个临时文件并执行（这种方式最稳定，不会出错）
+                echo '
+                const ci = require("miniprogram-ci");
+                
+                // 直接读取 GitHub Secret 中的文本内容
+                const privateKeyContent = process.env.WECHAT_PRIVATE_KEY_CONTENT;
+      
+                // 验证一下是否读取到了
+                if (!privateKeyContent) {
+                    console.error("❌ 错误：没有读取到密钥，请检查 GitHub Secrets 是否配置正确");
+                    process.exit(1);
+                }
+      
+                const project = new ci.Project({
+                  appid: process.env.WECHAT_APP_ID, 
+                  type: "miniProgram",
+                  projectPath: "unpackage/dist/build/mp-weixin",
+                  privateKeyContent: privateKeyContent,
+                  ignores: ["node_modules/**/*"]
+                });
+      
+                // 生成带当前时间的备注
+                const currentTime = new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
+                const desc = "agent在 " + currentTime + " 提交上传";
+      
+                ci.upload({
+                  project,
+                  version: "1.0.0", 
+                  desc: desc 
+                }).then(() => {
+                  console.log("✅ 微信小程序上传成功！");
+                }).catch((err) => {
+                  console.error("❌ 上传失败:", err);
+                  process.exit(1);
+                });
+                ' > upload-script.js && node upload-script.js
