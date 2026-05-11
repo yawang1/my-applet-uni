@@ -1,37 +1,52 @@
 name: Build UniApp and Generate Preview QR Code
 
-# 触发条件：当代码推送到 main 分支时自动执行
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch: # 允许在 GitHub 页面上手动点击运行
+  workflow_dispatch:
 
 jobs:
   build-and-preview:
-    runs-on: ubuntu-latest # 使用 GitHub 提供的免费 Linux 虚拟机
+    runs-on: ubuntu-latest
 
     steps:
-      # 1. 拉取仓库代码
+      # 1. 拉取代码
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. 设置 Node.js 环境 (建议与本地开发版本一致，这里是 24)
+      # 2. 设置 Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
 
-      # 3. 安装项目依赖 (解决 vue-cli-service 找不到的问题)
-      - name: Install dependencies
-        run: npm install
+      # 3. 【关键步骤】处理本地插件并强制安装
+      # 这一步会把本地插件打包，然后修改 package.json 指向 tar 包，彻底解决 Linux 软链接 ENOENT 报错
+      - name: Fix local plugin for Linux and Install deps
+        run: |
+          npm install -g npm-packlist
+          
+          # 打包本地插件
+          cd src/uni_modules/eat-roulette-mini-program
+          npm pack
+          cd ../../..
+          
+          # 修改根目录 package.json，把本地插件替换为刚打的包
+          sed -i 's|"eat-roulette-mini-program": "file:src/uni_modules/eat-roulette-mini-program"|"eat-roulette-mini-program": "file:src/uni_modules/eat-roulette-mini-program/eat-roulette-mini-program-1.0.0.tgz"|' package.json
+          
+          # 清理旧的 node_modules 防止缓存干扰
+          rm -rf node_modules
+          
+          # 强制安装依赖（忽略 peer deps 冲突）
+          npm install --legacy-peer-deps
 
-      # 4. 【修改这里】先安装依赖，再执行打包
+      # 4. 编译 uni-app
       - name: Build uni-app for MP-Weixin
         run: |
           npm install
           npm run build:mp-weixin
 
-      # 5. 注入环境变量 (为预览脚本准备密钥)
+      # 5. 注入环境变量
       - name: Setup Environment Variables
         env:
           WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
@@ -40,11 +55,11 @@ jobs:
           echo "WECHAT_APP_ID=$WECHAT_APP_ID" >> $GITHUB_ENV
           echo "WECHAT_PRIVATE_KEY_BASE64=$WECHAT_PRIVATE_KEY_BASE64" >> $GITHUB_ENV
 
-      # 6. 执行预览脚本，生成二维码
+      # 6. 执行预览脚本
       - name: Generate Preview QR Code
         run: node scripts/preview.js
 
-      # 7. 上传生成的二维码，方便下载
+      # 7. 上传二维码
       - name: Upload QR Code Artifact
         uses: actions/upload-artifact@v4
         with:
