@@ -52,7 +52,7 @@
 </template>
 
 <script>
-const FOOD_OPTIONS = ['火锅嘿嘿', '麻辣烫', '烤肉', '汉堡', '黄焖鸡', '寿司', '牛肉面', '炸鸡']
+const FOOD_OPTIONS = ['火锅嘿嘿', '麻辣烫啊！', '烤肉', '汉堡', '黄焖鸡', '寿司', '牛肉面', '炸鸡']
 const SEGMENT_COLORS = ['#ffb37a', '#ffd166', '#95d5b2', '#7bdff2', '#b8c0ff', '#ffc6ff', '#f4a261', '#caffbf']
 const SPIN_DURATION = 4200
 
