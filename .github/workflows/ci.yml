@@ -26,22 +26,22 @@ jobs:
       - name: Upload to WeChat
         env:
           WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
-          WECHAT_PRIVATE_KEY_CONTENT: ${{ secrets.WECHAT_PRIVATE_KEY_CONTENT }}
+          WECHAT_PRIVATE_KEY_BASE64: ${{ secrets.WECHAT_PRIVATE_KEY_BASE64 }}
         run: |
           npm install miniprogram-ci --save-dev
 
           cat << 'EOF' > upload.js
           const ci = require('miniprogram-ci');
 
-          if (!process.env.WECHAT_PRIVATE_KEY_CONTENT) {
-            throw new Error('❌ 未读取到 WECHAT_PRIVATE_KEY_CONTENT');
+          if (!process.env.WECHAT_PRIVATE_KEY_BASE64) {
+            throw new Error('❌ 未读取到 WECHAT_PRIVATE_KEY_BASE64');
           }
 
           const project = new ci.Project({
             appid: process.env.WECHAT_APP_ID,
             type: 'miniProgram',
             projectPath: 'unpackage/dist/build/mp-weixin',
-            privateKeyContent: process.env.WECHAT_PRIVATE_KEY_CONTENT,
+            privateKeyContent: process.env.WECHAT_PRIVATE_KEY_BASE64,
             ignores: ['node_modules/**/*'],
           });
 
