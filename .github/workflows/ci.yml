@@ -25,9 +25,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # 4. 编译 uni-app 为微信小程序
+      # 4. 【修改这里】先安装依赖，再执行打包
       - name: Build uni-app for MP-Weixin
-        run: npm run build:mp-weixin
+        run: |
+          npm install
+          npm run build:mp-weixin
 
       # 5. 注入环境变量 (为预览脚本准备密钥)
       - name: Setup Environment Variables
