@@ -46,6 +46,29 @@ jobs:
         run: |
           echo "WECHAT_APP_ID=$WECHAT_APP_ID" >> $GITHUB_ENV
           echo "WECHAT_PRIVATE_KEY_BASE64=$WECHAT_PRIVATE_KEY_BASE64" >> $GITHUB_ENV
+	- name: 上传到微信小程序后台
+	        run: |
+	          npm install miniprogram-ci --save-dev
+	          node -e "
+	          const ci = require('miniprogram-ci');
+	          const project = new ci.Project({
+	            appid: '你的小程序AppID', // 替换成你的
+	            type: 'miniProgram',
+	            projectPath: 'unpackage/dist/build/mp-weixin', // uni-app打包后的路径
+	            privateKeyPath: '你的密钥文件名.key', // 刚才下载的那个key
+	            ignores: ['node_modules/**/*']
+	          });
+	          ci.upload({
+	            project,
+	            version: '1.0.0', // 固定版本号
+	            desc: 'agent在 $(date +"%Y-%m-%d %H:%M:%S") 提交上传' // 这里用Linux命令获取当前时间作为备注
+	          }).then(() => {
+	            console.log('✅ 上传成功！')
+	          }).catch((err) => {
+	            console.error(err);
+	            process.exit(1);
+	          });
+	          "
 
       # 6. 执行预览脚本，生成二维码
       - name: Generate Preview QR Code
