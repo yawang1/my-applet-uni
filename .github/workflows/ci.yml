@@ -14,11 +14,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. 设置 Node.js 环境 (锁定 Node 18，兼容性最好)
+      # 2. 设置 Node.js 环境 (锁定 Node 24，兼容性最好)
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '24'
           cache: 'npm' # 启用 npm 缓存加速
 
       # 3. 【核心修复步骤】彻底清理并强制安装依赖
