@@ -15,11 +15,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. 设置 Node.js 环境 (建议与本地开发版本一致，这里是 18)
+      # 2. 设置 Node.js 环境 (建议与本地开发版本一致，这里是 24)
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '24'
 
       # 3. 安装项目依赖 (解决 vue-cli-service 找不到的问题)
       - name: Install dependencies
