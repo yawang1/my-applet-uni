@@ -1,9 +1,8 @@
-name: Build and Upload UniApp to WeChat MiniProgram
+name: Build and Upload WeChat MiniProgram
 
 on:
   push:
-    branches:
-      - main  # 或者你的默认分支，比如 master
+    branches: [main]
 
 jobs:
   build-and-upload:
@@ -11,58 +10,57 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 18 # 根据你的项目调整 Node 版本
+          node-version: 18
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
-      - name: Build WeChat MiniProgram
+      - name: Build uni-app
         run: npm run build:mp-weixin
 
-      # === 关键步骤：上传到微信小程序后台 ===
-      - name: Upload to WeChat MiniProgram
-              run: |
-                # 1. 安装微信官方上传工具
-                npm install miniprogram-ci --save-dev
-      
-                # 2. 将脚本内容写入一个临时文件并执行（这种方式最稳定，不会出错）
-                echo '
-                const ci = require("miniprogram-ci");
-                
-                // 直接读取 GitHub Secret 中的文本内容
-                const privateKeyContent = process.env.WECHAT_PRIVATE_KEY_CONTENT;
-      
-                // 验证一下是否读取到了
-                if (!privateKeyContent) {
-                    console.error("❌ 错误：没有读取到密钥，请检查 GitHub Secrets 是否配置正确");
-                    process.exit(1);
-                }
-      
-                const project = new ci.Project({
-                  appid: process.env.WECHAT_APP_ID, 
-                  type: "miniProgram",
-                  projectPath: "unpackage/dist/build/mp-weixin",
-                  privateKeyContent: privateKeyContent,
-                  ignores: ["node_modules/**/*"]
-                });
-      
-                // 生成带当前时间的备注
-                const currentTime = new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
-                const desc = "agent在 " + currentTime + " 提交上传";
-      
-                ci.upload({
-                  project,
-                  version: "1.0.0", 
-                  desc: desc 
-                }).then(() => {
-                  console.log("✅ 微信小程序上传成功！");
-                }).catch((err) => {
-                  console.error("❌ 上传失败:", err);
-                  process.exit(1);
-                });
-                ' > upload-script.js && node upload-script.js
+      - name: Upload to WeChat
+        env:
+          WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
+          WECHAT_PRIVATE_KEY_CONTENT: ${{ secrets.WECHAT_PRIVATE_KEY_CONTENT }}
+        run: |
+          npm install miniprogram-ci --save-dev
+
+          cat << 'EOF' > upload.js
+          const ci = require('miniprogram-ci');
+
+          if (!process.env.WECHAT_PRIVATE_KEY_CONTENT) {
+            throw new Error('❌ 未读取到 WECHAT_PRIVATE_KEY_CONTENT');
+          }
+
+          const project = new ci.Project({
+            appid: process.env.WECHAT_APP_ID,
+            type: 'miniProgram',
+            projectPath: 'unpackage/dist/build/mp-weixin',
+            privateKeyContent: process.env.WECHAT_PRIVATE_KEY_CONTENT,
+            ignores: ['node_modules/**/*'],
+          });
+
+          const now = new Date().toLocaleString('zh-CN', {
+            timeZone: 'Asia/Shanghai',
+          });
+
+          ci.upload({
+            project,
+            version: '1.0.0',
+            desc: `agent在 ${now} 提交上传`,
+          })
+            .then(() => {
+              console.log('✅ 上传成功');
+            })
+            .catch((err) => {
+              console.error('❌ 上传失败', err);
+              process.exit(1);
+            });
+          EOF
+
+          node upload.js
