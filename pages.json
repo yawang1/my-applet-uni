@@ -1,0 +1,18 @@
+{
+  "pages": [
+    {
+      "path": "pages/home/index",
+      "style": {
+        "navigationBarTitleText": "今天吃什么",
+        "navigationBarBackgroundColor": "#ff9f6e",
+        "navigationBarTextStyle": "white"
+      }
+    }
+  ],
+  "globalStyle": {
+    "backgroundColor": "#fff7ef",
+    "navigationBarBackgroundColor": "#ff9f6e",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "今天吃什么"
+  }
+}
