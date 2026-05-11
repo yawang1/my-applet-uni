@@ -1,0 +1,49 @@
+name: Build UniApp and Generate Preview QR Code
+
+on:
+  push:
+    branches: [ "main" ] # 当推送到 main 分支时触发
+  workflow_dispatch: # 允许在 GitHub 页面上手动触发
+
+jobs:
+  build-and-preview:
+    runs-on: ubuntu-latest # 使用 GitHub 提供的免费云端服务器
+
+    steps:
+      # 1. 拉取最新代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. 设置 Node.js 环境 (建议与本地开发版本一致)
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # 3. 安装项目依赖
+      - name: Install dependencies
+        run: npm install
+
+      # 4. 编译 uni-app 为微信小程序
+      - name: Build uni-app for MP-Weixin
+        run: npm run build:mp-weixin
+
+      # 5. 注入环境变量
+      - name: Setup Environment Variables
+        env:
+          WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
+          WECHAT_PRIVATE_KEY_BASE64: ${{ secrets.WECHAT_PRIVATE_KEY_BASE64 }}
+        run: |
+          echo "WECHAT_APP_ID=$WECHAT_APP_ID" >> $GITHUB_ENV
+          echo "WECHAT_PRIVATE_KEY_BASE64=$WECHAT_PRIVATE_KEY_BASE64" >> $GITHUB_ENV
+
+      # 6. 执行预览脚本，生成二维码
+      - name: Generate Preview QR Code
+        run: node scripts/preview.js
+
+      # 7. 将生成的二维码打包，供下载
+      - name: Upload QR Code Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-qrcode
+          path: preview-qrcode.jpg
