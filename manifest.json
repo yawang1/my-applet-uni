@@ -82,6 +82,9 @@
             "scope.userLocation" : {
                 "desc" : "小程序中有功能需要调用位置接口"
             }
+        },
+        "unipush" : {
+            "enable" : false
         }
     },
     "mp-alipay" : {
