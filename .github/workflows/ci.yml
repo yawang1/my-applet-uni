@@ -29,15 +29,15 @@ jobs:
       - name: Upload to WeChat MiniProgram
         env:
           WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
-          WECHAT_PRIVATE_KEY_BASE64: ${{ secrets.WECHAT_PRIVATE_KEY_BASE64 }}
+          WECHAT_PRIVATE_KEY: ${{ secrets.WECHAT_PRIVATE_KEY }}
         run: |
           if [ -z "$WECHAT_APP_ID" ]; then
             echo "WECHAT_APP_ID is not set"
             exit 1
           fi
 
-          if [ -z "$WECHAT_PRIVATE_KEY_BASE64" ]; then
-            echo "WECHAT_PRIVATE_KEY_BASE64 is not set"
+          if [ -z "$WECHAT_PRIVATE_KEY" ]; then
+            echo "WECHAT_PRIVATE_KEY is not set"
             exit 1
           fi
 
@@ -47,7 +47,7 @@ jobs:
           fi
 
           trap 'rm -f private.key' EXIT
-          printf '%s' "$WECHAT_PRIVATE_KEY_BASE64" | base64 --decode > private.key
+          printf '%s' "$WECHAT_PRIVATE_KEY" > private.key
 
           node <<'EOF'
           const ci = require('miniprogram-ci')
