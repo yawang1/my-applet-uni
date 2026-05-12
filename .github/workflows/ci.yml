@@ -1,62 +1,119 @@
 name: Build and Upload UniApp to WeChat
 
 on:
+  # 推送到 main 分支时自动触发
   push:
     branches:
       - main
+  # 支持在 GitHub Actions 页面手动触发
   workflow_dispatch:
 
 jobs:
   build-and-upload:
+    # 使用 GitHub 提供的 Ubuntu 运行环境
     runs-on: ubuntu-latest
 
     steps:
+      # 第一步：拉取仓库代码到 CI 运行环境
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 第二步：安装并启用指定版本的 Node.js，同时缓存 npm 依赖
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18.20.8
           cache: npm
 
+      # 第三步：根据 package-lock.json 安装依赖，保证 CI 与本地版本尽量一致
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
+      # 第四步：执行 uni-app 构建命令，生成微信小程序产物
       - name: Build uni-app for MP-Weixin
         run: npm run build:mp-weixin
 
+      # 第五步：把构建产物上传到微信小程序后台，作为体验版
       - name: Upload to WeChat MiniProgram
         env:
           WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
           WECHAT_PRIVATE_KEY: ${{ secrets.WECHAT_PRIVATE_KEY }}
         run: |
+          # 校验小程序 AppID 是否已通过 GitHub Secrets 注入
           if [ -z "$WECHAT_APP_ID" ]; then
             echo "WECHAT_APP_ID is not set"
             exit 1
           fi
 
+          # 校验微信上传私钥是否已通过 GitHub Secrets 注入
           if [ -z "$WECHAT_PRIVATE_KEY" ]; then
             echo "WECHAT_PRIVATE_KEY is not set"
             exit 1
           fi
 
+          # 校验构建产物目录是否存在，避免上传空目录
           if [ ! -d "dist/build/mp-weixin" ]; then
             echo "Build output dist/build/mp-weixin does not exist"
             exit 1
           fi
 
+          # 注册退出清理逻辑，并把私钥内容写入临时文件供 miniprogram-ci 使用
           trap 'rm -f private.key' EXIT
           printf '%s' "$WECHAT_PRIVATE_KEY" > private.key
 
+          # 使用 Node 脚本动态计算版本号、生成描述并上传体验版
           node <<'EOF'
+          const fs = require('fs')
+          const path = require('path')
           const ci = require('miniprogram-ci')
-          const packageJson = require('./package.json')
+          const packageJsonPath = path.resolve('./package.json')
+          const packageJson = require(packageJsonPath)
 
-          const version = packageJson.version || '1.0.0'
-          const shortSha = (process.env.GITHUB_SHA || '').slice(0, 7)
-          const desc = `GitHub Actions build ${process.env.GITHUB_RUN_NUMBER || ''} ${shortSha}`.trim()
+          // 在现有版本号基础上把最后一段数字加 1，例如 1.0.0 -> 1.0.1
+          function bumpVersion(version) {
+            const parts = String(version || '1.0.0').split('.')
+            if (parts.length === 0) {
+              return '1.0.0'
+            }
 
+            const lastIndex = parts.length - 1
+            const lastNumber = Number(parts[lastIndex])
+            if (Number.isNaN(lastNumber)) {
+              return '1.0.0'
+            }
+
+            parts[lastIndex] = String(lastNumber + 1)
+            return parts.join('.')
+          }
+
+          // 读取 package.json 当前版本号，生成新版本号，并把新版本写回 package.json
+          const previousVersion = packageJson.version || '1.0.0'
+          const nextVersion = bumpVersion(previousVersion)
+          packageJson.version = nextVersion
+          fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`)
+
+          // 生成北京时间格式的上传时间，用于体验版描述
+          const uploadTime = new Intl.DateTimeFormat('zh-CN', {
+            timeZone: 'Asia/Shanghai',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          }).format(new Date()).replace(/\//g, '-')
+          // 设置体验版描述，并指定上传到 1 号机器人对应的体验版
+          const desc = `agent机器人于${uploadTime}推送`
+          const robot = 1
+
+          // 输出关键日志，方便在 GitHub Actions 页面排查上传问题
+          console.log(`Previous version: ${previousVersion}`)
+          console.log(`Upload version: ${nextVersion}`)
+          console.log(`Upload desc: ${desc}`)
+          console.log(`Upload robot: ${robot}`)
+
+          // 创建 miniprogram-ci 项目对象，指定 AppID、构建目录和私钥文件
           const project = new ci.Project({
             appid: process.env.WECHAT_APP_ID,
             type: 'miniProgram',
@@ -65,10 +122,12 @@ jobs:
             ignores: ['node_modules/**/*']
           })
 
+          // 调用微信官方上传接口，把本次构建上传为体验版
           ci.upload({
             project,
-            version,
-            desc
+            version: nextVersion,
+            desc,
+            robot
           })
             .then(() => {
               console.log('WeChat MiniProgram upload succeeded')
