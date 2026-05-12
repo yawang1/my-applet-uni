@@ -33,7 +33,7 @@ jobs:
       - name: Build uni-app for MP-Weixin
         run: npm run build:mp-weixin
 
-      # 第五步：把构建产物上传到微信小程序后台，作为体验版
+      # 第五步：把构建产物上传到微信小程序后台
       - name: Upload to WeChat MiniProgram
         env:
           WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
