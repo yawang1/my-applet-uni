@@ -40,6 +40,11 @@ jobs:
           WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
           WECHAT_PRIVATE_KEY_BASE64: ${{ secrets.WECHAT_PRIVATE_KEY_BASE64 }}
         run: |
+		  # 0. 清理旧文件（防止损坏的缓存导致报错）
+		  rm -rf node_modules package-lock.json
+		  
+		  # 0.5. 重新安装依赖
+		  npm install
           # 1. 安装微信官方上传工具
           npm install miniprogram-ci --save-dev
 
