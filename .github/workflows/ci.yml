@@ -33,7 +33,7 @@ jobs:
       - name: Build uni-app for MP-Weixin
         run: npm run build:mp-weixin
 
-      # 5. 【核心】上传到微信小程序后台
+      # 5. 上传到微信小程序后台
       - name: Upload to WeChat MiniProgram
         env:
           # 从 GitHub Secrets 读取配置
@@ -43,7 +43,7 @@ jobs:
           # 1. 安装微信官方上传工具
           npm install miniprogram-ci --save-dev
 
-          # 2. 【关键修复】将密钥内容写入临时文件
+          # 2. 将密钥内容写入临时文件
           # 微信工具必须读取文件，不能直接读环境变量内容
           echo "$WECHAT_PRIVATE_KEY_BASE64" > private.key
 
