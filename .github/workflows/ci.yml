@@ -2,7 +2,8 @@ name: Build and Upload UniApp to WeChat
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -10,79 +11,71 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 拉取代码
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. 设置 Node.js 环境 (锁定最稳定的 18 版本)
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18.20.8'
-          cache: 'npm'
+          node-version: 18.20.8
+          cache: npm
 
-      # 3. 彻底清理并安装依赖
-      - name: Clean and Install dependencies
-        run: |
-          rm -rf node_modules package-lock.json
-          npm cache clean --force
-          npm config set registry https://registry.npmmirror.com
-          npm install --legacy-peer-deps
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
 
-      # 4. 编译 uni-app 为微信小程序
       - name: Build uni-app for MP-Weixin
         run: npm run build:mp-weixin
 
-      # 5. 上传到微信小程序后台
       - name: Upload to WeChat MiniProgram
         env:
-          # 从 GitHub Secrets 读取配置
           WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
           WECHAT_PRIVATE_KEY_BASE64: ${{ secrets.WECHAT_PRIVATE_KEY_BASE64 }}
         run: |
-		  # 0. 清理旧文件（防止损坏的缓存导致报错）
-		  rm -rf node_modules package-lock.json
-		  
-		  # 0.5. 重新安装依赖
-		  npm install
-          # 1. 安装微信官方上传工具
-          npm install miniprogram-ci --save-dev
+          if [ -z "$WECHAT_APP_ID" ]; then
+            echo "WECHAT_APP_ID is not set"
+            exit 1
+          fi
 
-          # 2. 将密钥内容写入临时文件
-          # 微信工具必须读取文件，不能直接读环境变量内容
-          echo "$WECHAT_PRIVATE_KEY_BASE64" > private.key
+          if [ -z "$WECHAT_PRIVATE_KEY_BASE64" ]; then
+            echo "WECHAT_PRIVATE_KEY_BASE64 is not set"
+            exit 1
+          fi
 
-          # 3. 执行上传脚本
-          node -e "
-          const ci = require('miniprogram-ci');
-          
+          if [ ! -d "dist/build/mp-weixin" ]; then
+            echo "Build output dist/build/mp-weixin does not exist"
+            exit 1
+          fi
+
+          trap 'rm -f private.key' EXIT
+          printf '%s' "$WECHAT_PRIVATE_KEY_BASE64" | base64 --decode > private.key
+
+          node <<'EOF'
+          const ci = require('miniprogram-ci')
+          const packageJson = require('./package.json')
+
+          const version = packageJson.version || '1.0.0'
+          const shortSha = (process.env.GITHUB_SHA || '').slice(0, 7)
+          const desc = `GitHub Actions build ${process.env.GITHUB_RUN_NUMBER || ''} ${shortSha}`.trim()
+
           const project = new ci.Project({
             appid: process.env.WECHAT_APP_ID,
             type: 'miniProgram',
-            projectPath: 'unpackage/dist/build/mp-weixin',
-            privateKeyPath: 'private.key', // 指向刚才生成的文件
+            projectPath: 'dist/build/mp-weixin',
+            privateKeyPath: 'private.key',
             ignores: ['node_modules/**/*']
-          });
-
-          // 生成当前时间作为备注
-          const now = new Date();
-          const timeStr = now.getFullYear() + '-' + 
-                         String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                         String(now.getDate()).padStart(2, '0') + ' ' +
-                         String(now.getHours()).padStart(2, '0') + ':' + 
-                         String(now.getMinutes()).padStart(2, '0') + ':' + 
-                         String(now.getSeconds()).padStart(2, '0');
-          
-          const desc = 'agent在 ' + timeStr + ' 提交上传';
+          })
 
           ci.upload({
             project,
-            version: '1.0.0',
-            desc: desc
-          }).then(() => {
-            console.log('✅ 微信小程序上传成功！');
-          }).catch((err) => {
-            console.error('❌ 上传失败:', err);
-            process.exit(1);
-          });
-          "
+            version,
+            desc
+          })
+            .then(() => {
+              console.log('WeChat MiniProgram upload succeeded')
+            })
+            .catch((error) => {
+              console.error('WeChat MiniProgram upload failed')
+              console.error(error)
+              process.exit(1)
+            })
+          EOF
