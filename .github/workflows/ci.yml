@@ -61,13 +61,15 @@ jobs:
           trap 'rm -f private.key' EXIT
           printf '%s' "$WECHAT_PRIVATE_KEY" > private.key
 
-          # 使用 Node 脚本动态计算版本号、生成描述并上传体验版
+          # 使用 Node 脚本动态计算版本号、生成描述、上传体验版并导出预览二维码
           node <<'EOF'
           const fs = require('fs')
           const path = require('path')
           const ci = require('miniprogram-ci')
           const packageJsonPath = path.resolve('./package.json')
           const packageJson = require(packageJsonPath)
+          const artifactDir = path.resolve('./artifacts')
+          const qrcodePath = path.join(artifactDir, 'wechat-preview-qrcode.jpg')
 
           // 在现有版本号基础上把最后一段数字加 1，例如 1.0.0 -> 1.0.1
           function bumpVersion(version) {
@@ -86,55 +88,77 @@ jobs:
             return parts.join('.')
           }
 
-          // 读取 package.json 当前版本号，生成新版本号，并把新版本写回 package.json
-          const previousVersion = packageJson.version || '1.0.0'
-          const nextVersion = bumpVersion(previousVersion)
-          packageJson.version = nextVersion
-          fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`)
+          async function main() {
+            // 读取 package.json 当前版本号，生成新版本号，并把新版本写回 package.json
+            const previousVersion = packageJson.version || '1.0.0'
+            const nextVersion = bumpVersion(previousVersion)
+            packageJson.version = nextVersion
+            fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`)
 
-          // 生成北京时间格式的上传时间，用于体验版描述
-          const uploadTime = new Intl.DateTimeFormat('zh-CN', {
-            timeZone: 'Asia/Shanghai',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-          }).format(new Date()).replace(/\//g, '-')
-          // 设置体验版描述，并指定上传到 1 号机器人对应的体验版
-          const desc = `agent机器人于${uploadTime}推送`
-          const robot = 1
+            // 生成北京时间格式的上传时间，用于体验版描述
+            const uploadTime = new Intl.DateTimeFormat('zh-CN', {
+              timeZone: 'Asia/Shanghai',
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false
+            }).format(new Date()).replace(/\//g, '-')
 
-          // 输出关键日志，方便在 GitHub Actions 页面排查上传问题
-          console.log(`Previous version: ${previousVersion}`)
-          console.log(`Upload version: ${nextVersion}`)
-          console.log(`Upload desc: ${desc}`)
-          console.log(`Upload robot: ${robot}`)
+            // 设置体验版描述，并指定上传到 1 号机器人对应的体验版
+            const desc = `agent机器人于${uploadTime}推送`
+            const robot = 1
 
-          // 创建 miniprogram-ci 项目对象，指定 AppID、构建目录和私钥文件
-          const project = new ci.Project({
-            appid: process.env.WECHAT_APP_ID,
-            type: 'miniProgram',
-            projectPath: 'dist/build/mp-weixin',
-            privateKeyPath: 'private.key',
-            ignores: ['node_modules/**/*']
-          })
+            // 输出关键日志，方便在 GitHub Actions 页面排查上传问题
+            console.log(`Previous version: ${previousVersion}`)
+            console.log(`Upload version: ${nextVersion}`)
+            console.log(`Upload desc: ${desc}`)
+            console.log(`Upload robot: ${robot}`)
 
-          // 调用微信官方上传接口，把本次构建上传为体验版
-          ci.upload({
-            project,
-            version: nextVersion,
-            desc,
-            robot
-          })
-            .then(() => {
-              console.log('WeChat MiniProgram upload succeeded')
+            // 创建 miniprogram-ci 项目对象，指定 AppID、构建目录和私钥文件
+            const project = new ci.Project({
+              appid: process.env.WECHAT_APP_ID,
+              type: 'miniProgram',
+              projectPath: 'dist/build/mp-weixin',
+              privateKeyPath: 'private.key',
+              ignores: ['node_modules/**/*']
             })
-            .catch((error) => {
-              console.error('WeChat MiniProgram upload failed')
-              console.error(error)
-              process.exit(1)
+
+            // 调用微信官方上传接口，把本次构建上传为体验版
+            await ci.upload({
+              project,
+              version: nextVersion,
+              desc,
+              robot
             })
+            console.log('WeChat MiniProgram upload succeeded')
+
+            // 生成预览二维码图片，供 Actions 页面下载后扫码体验
+            fs.mkdirSync(artifactDir, { recursive: true })
+            await ci.preview({
+              project,
+              desc,
+              robot,
+              qrcodeFormat: 'image',
+              qrcodeOutputDest: qrcodePath
+            })
+            console.log(`Preview qrcode generated at: ${qrcodePath}`)
+          }
+
+          main().catch((error) => {
+            console.error('WeChat MiniProgram workflow failed')
+            console.error(error)
+            process.exit(1)
+          })
           EOF
+
+      # 第六步：把生成的预览二维码图片上传到 Actions artifacts，便于下载扫码
+      - name: Upload preview qrcode artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wechat-preview-qrcode
+          path: artifacts/wechat-preview-qrcode.jpg
+          if-no-files-found: error
